@@ -1,98 +1,112 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Docent Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API backend for **Docent**, an AI tutor mobile app. Built with NestJS (Express), it handles file uploads, document parsing, lesson generation via Claude, and user progress tracking.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Tech Stack
 
-## Description
+- **NestJS** (Express) — REST API
+- **Supabase** — PostgreSQL database
+- **Clerk** — JWT authentication
+- **Cloudflare R2** — File storage (S3-compatible)
+- **BullMQ + Redis** — File parsing queue
+- **Anthropic Claude** — Lesson outline and script generation
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Prerequisites
 
-## Project setup
+- Node.js 18+
+- Redis (for file parsing queue)
+- Supabase project
+- Clerk application
+- Cloudflare R2 bucket
+- Anthropic API key
+
+## Setup
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+Copy `.env.example` to `.env` and fill in your credentials:
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+cp .env.example .env
 ```
 
-## Run tests
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Server port (default: 3000) |
+| `ALLOWED_ORIGIN` | CORS origin (e.g. Expo app URL) |
+| `SUPABASE_URL` | Supabase project URL |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
+| `CLERK_SECRET_KEY` | Clerk secret key |
+| `R2_ACCOUNT_ID` | Cloudflare R2 account ID |
+| `R2_ACCESS_KEY_ID` | R2 access key |
+| `R2_SECRET_ACCESS_KEY` | R2 secret key |
+| `R2_BUCKET_NAME` | R2 bucket name |
+| `R2_PUBLIC_URL` | R2 public URL for assets |
+| `REDIS_URL` | Redis connection URL |
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+
+### Database
+
+Run the initial migration against your Supabase project:
 
 ```bash
-# unit tests
-$ npm run test
+# Using Supabase CLI (if linked)
+supabase db push
 
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+# Or run manually in Supabase SQL Editor
+# See supabase/migrations/001_initial.sql
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## Running the App
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# Development
+npm run start:dev
+
+# Production build
+npm run build
+npm run start:prod
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+The app can start without Redis, Supabase, or R2 configured — you'll see warnings and those features will fail at request time. For full functionality, configure all services.
 
-## Resources
+## API Endpoints
 
-Check out a few resources that may come in handy when working with NestJS:
+All endpoints except health checks require `Authorization: Bearer <clerk_jwt>`.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/files/upload` | Upload PDF, DOCX, or TXT (max 20MB) |
+| `GET` | `/files/:materialId/status` | Poll material processing status |
+| `POST` | `/lessons/generate` | Generate lesson outline from parsed material |
+| `GET` | `/lessons` | List lessons for current user |
+| `GET` | `/lessons/:id` | Get single lesson with full outline |
 
-## Support
+## Project Structure
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+```
+src/
+├── config/           # Supabase, R2 services
+├── common/           # Guards, decorators, filters, interceptors
+├── modules/
+│   ├── users/        # User upsert (findOrCreate, findByClerkId)
+│   ├── files/        # Upload, parsing queue, status polling
+│   └── lessons/      # Lesson generation, Claude integration
+├── app.module.ts
+└── main.ts
+supabase/
+└── migrations/      # SQL migrations
+```
 
-## Stay in touch
+## Flow
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+1. **Upload** — User uploads a file → stored in R2 → `materials` row created → parsing job enqueued
+2. **Parsing** — BullMQ worker extracts text (PDF/DOCX/TXT) → uploads to `parsed/{materialId}.txt` → updates status to `ready`
+3. **Lesson** — Client calls `/lessons/generate` with `materialId` → Claude generates outline → stored in `lessons` table
+4. **Progress** — `progress` table tracks per-lesson completion (for future use)
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED
