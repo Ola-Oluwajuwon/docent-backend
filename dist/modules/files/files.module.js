@@ -1,0 +1,31 @@
+"use strict";
+var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
+    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
+    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
+    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+    return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.FilesModule = void 0;
+const common_1 = require("@nestjs/common");
+const bullmq_1 = require("@nestjs/bullmq");
+const files_controller_1 = require("./files.controller");
+const files_service_1 = require("./files.service");
+const file_parsing_processor_1 = require("./file-parsing.processor");
+const r2_service_1 = require("../../config/r2.service");
+const supabase_service_1 = require("../../config/supabase.service");
+const users_module_1 = require("../users/users.module");
+let FilesModule = class FilesModule {
+};
+exports.FilesModule = FilesModule;
+exports.FilesModule = FilesModule = __decorate([
+    (0, common_1.Module)({
+        imports: [
+            bullmq_1.BullModule.registerQueue({ name: 'file-parsing' }),
+            users_module_1.UsersModule,
+        ],
+        controllers: [files_controller_1.FilesController],
+        providers: [files_service_1.FilesService, file_parsing_processor_1.FileParsingProcessor, r2_service_1.R2Service, supabase_service_1.SupabaseService],
+    })
+], FilesModule);
+//# sourceMappingURL=files.module.js.map
