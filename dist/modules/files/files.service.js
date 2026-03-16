@@ -15,8 +15,7 @@ var FilesService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FilesService = void 0;
 const common_1 = require("@nestjs/common");
-const bullmq_1 = require("@nestjs/bullmq");
-const bullmq_2 = require("bullmq");
+const bullmq_1 = require("bullmq");
 const uuid_1 = require("uuid");
 const supabase_service_1 = require("../../config/supabase.service");
 const r2_service_1 = require("../../config/r2.service");
@@ -69,13 +68,18 @@ let FilesService = FilesService_1 = class FilesService {
             .from('materials')
             .update({ status: 'processing' })
             .eq('id', mat.id);
-        await this.fileParsingQueue.add('parse', {
-            materialId: mat.id,
-            storagePath,
-            fileType: ext,
-            clerkId,
-        });
-        this.logger.log(`File queued for parsing: ${mat.id}`);
+        if (this.fileParsingQueue) {
+            await this.fileParsingQueue.add('parse', {
+                materialId: mat.id,
+                storagePath,
+                fileType: ext,
+                clerkId,
+            });
+            this.logger.log(`File queued for parsing: ${mat.id}`);
+        }
+        else {
+            this.logger.warn(`Redis not available — file ${mat.id} uploaded but parsing is deferred`);
+        }
         return { materialId: mat.id, fileName: file.originalname };
     }
     async getMaterialStatus(materialId, userId) {
@@ -110,9 +114,10 @@ let FilesService = FilesService_1 = class FilesService {
 exports.FilesService = FilesService;
 exports.FilesService = FilesService = FilesService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __param(2, (0, bullmq_1.InjectQueue)('file-parsing')),
+    __param(2, (0, common_1.Optional)()),
+    __param(2, (0, common_1.Inject)('BullQueue_file-parsing')),
     __metadata("design:paramtypes", [supabase_service_1.SupabaseService,
         r2_service_1.R2Service,
-        bullmq_2.Queue])
+        bullmq_1.Queue])
 ], FilesService);
 //# sourceMappingURL=files.service.js.map

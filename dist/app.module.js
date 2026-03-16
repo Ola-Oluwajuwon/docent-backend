@@ -18,6 +18,12 @@ const logging_interceptor_1 = require("./common/interceptors/logging.interceptor
 const users_module_1 = require("./modules/users/users.module");
 const files_module_1 = require("./modules/files/files.module");
 const lessons_module_1 = require("./modules/lessons/lessons.module");
+const logger = new common_1.Logger('AppModule');
+const redisUrl = process.env.REDIS_URL;
+const redisConfigured = !!redisUrl && !redisUrl.includes('your-') && redisUrl.startsWith('redis');
+if (!redisConfigured) {
+    logger.warn('REDIS_URL not configured — BullMQ queues disabled. File parsing will not work until Redis is available.');
+}
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -28,15 +34,20 @@ exports.AppModule = AppModule = __decorate([
             throttler_1.ThrottlerModule.forRoot({
                 throttlers: [{ ttl: 60_000, limit: 60 }],
             }),
-            bullmq_1.BullModule.forRootAsync({
-                imports: [config_1.ConfigModule],
-                inject: [config_1.ConfigService],
-                useFactory: (config) => ({
-                    connection: {
-                        url: config.getOrThrow('REDIS_URL'),
-                    },
-                }),
-            }),
+            ...(redisConfigured
+                ? [
+                    bullmq_1.BullModule.forRootAsync({
+                        imports: [config_1.ConfigModule],
+                        inject: [config_1.ConfigService],
+                        useFactory: (config) => ({
+                            connection: {
+                                url: config.getOrThrow('REDIS_URL'),
+                                maxRetriesPerRequest: null,
+                            },
+                        }),
+                    }),
+                ]
+                : []),
             users_module_1.UsersModule,
             files_module_1.FilesModule,
             lessons_module_1.LessonsModule,

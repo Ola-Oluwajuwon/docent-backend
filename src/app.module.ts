@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, Logger } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
@@ -10,6 +10,17 @@ import { UsersModule } from './modules/users/users.module';
 import { FilesModule } from './modules/files/files.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
 
+const logger = new Logger('AppModule');
+const redisUrl = process.env.REDIS_URL;
+const redisConfigured =
+  !!redisUrl && !redisUrl.includes('your-') && redisUrl.startsWith('redis');
+
+if (!redisConfigured) {
+  logger.warn(
+    'REDIS_URL not configured — BullMQ queues disabled. File parsing will not work until Redis is available.',
+  );
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -18,15 +29,20 @@ import { LessonsModule } from './modules/lessons/lessons.module';
       throttlers: [{ ttl: 60_000, limit: 60 }],
     }),
 
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          url: config.getOrThrow<string>('REDIS_URL'),
-        },
-      }),
-    }),
+    ...(redisConfigured
+      ? [
+          BullModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({
+              connection: {
+                url: config.getOrThrow<string>('REDIS_URL'),
+                maxRetriesPerRequest: null,
+              },
+            }),
+          }),
+        ]
+      : []),
 
     UsersModule,
     FilesModule,

@@ -23,15 +23,20 @@ let R2Service = R2Service_1 = class R2Service {
     logger = new common_1.Logger(R2Service_1.name);
     constructor(configService) {
         this.configService = configService;
-        const accountId = this.configService.getOrThrow('R2_ACCOUNT_ID');
-        this.bucket = this.configService.getOrThrow('R2_BUCKET_NAME');
-        this.publicUrl = this.configService.getOrThrow('R2_PUBLIC_URL');
+    }
+    onModuleInit() {
+        const accountId = this.configService.get('R2_ACCOUNT_ID', '');
+        this.bucket = this.configService.get('R2_BUCKET_NAME', '');
+        this.publicUrl = this.configService.get('R2_PUBLIC_URL', '');
+        if (!accountId || accountId.includes('your-')) {
+            this.logger.warn('R2 credentials not configured — file operations will fail until valid values are provided in .env');
+        }
         this.s3 = new client_s3_1.S3Client({
             region: 'auto',
-            endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+            endpoint: `https://${accountId || 'placeholder'}.r2.cloudflarestorage.com`,
             credentials: {
-                accessKeyId: this.configService.getOrThrow('R2_ACCESS_KEY_ID'),
-                secretAccessKey: this.configService.getOrThrow('R2_SECRET_ACCESS_KEY'),
+                accessKeyId: this.configService.get('R2_ACCESS_KEY_ID', ''),
+                secretAccessKey: this.configService.get('R2_SECRET_ACCESS_KEY', ''),
             },
         });
     }

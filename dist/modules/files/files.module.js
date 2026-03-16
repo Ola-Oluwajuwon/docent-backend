@@ -15,17 +15,26 @@ const file_parsing_processor_1 = require("./file-parsing.processor");
 const r2_service_1 = require("../../config/r2.service");
 const supabase_service_1 = require("../../config/supabase.service");
 const users_module_1 = require("../users/users.module");
+const redisUrl = process.env.REDIS_URL;
+const redisConfigured = !!redisUrl && !redisUrl.includes('your-') && redisUrl.startsWith('redis');
 let FilesModule = class FilesModule {
 };
 exports.FilesModule = FilesModule;
 exports.FilesModule = FilesModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            bullmq_1.BullModule.registerQueue({ name: 'file-parsing' }),
+            ...(redisConfigured
+                ? [bullmq_1.BullModule.registerQueue({ name: 'file-parsing' })]
+                : []),
             users_module_1.UsersModule,
         ],
         controllers: [files_controller_1.FilesController],
-        providers: [files_service_1.FilesService, file_parsing_processor_1.FileParsingProcessor, r2_service_1.R2Service, supabase_service_1.SupabaseService],
+        providers: [
+            files_service_1.FilesService,
+            ...(redisConfigured ? [file_parsing_processor_1.FileParsingProcessor] : []),
+            r2_service_1.R2Service,
+            supabase_service_1.SupabaseService,
+        ],
     })
 ], FilesModule);
 //# sourceMappingURL=files.module.js.map

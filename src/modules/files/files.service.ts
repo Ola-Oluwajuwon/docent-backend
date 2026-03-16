@@ -3,8 +3,9 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  Optional,
+  Inject,
 } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { v4 as uuidv4 } from 'uuid';
 import { SupabaseService } from '../../config/supabase.service';
@@ -31,7 +32,9 @@ export class FilesService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly r2: R2Service,
-    @InjectQueue('file-parsing') private readonly fileParsingQueue: Queue,
+    @Optional()
+    @Inject('BullQueue_file-parsing')
+    private readonly fileParsingQueue?: Queue,
   ) {}
 
   async uploadFile(
@@ -76,14 +79,19 @@ export class FilesService {
       .update({ status: 'processing' })
       .eq('id', mat.id);
 
-    await this.fileParsingQueue.add('parse', {
-      materialId: mat.id,
-      storagePath,
-      fileType: ext,
-      clerkId,
-    });
-
-    this.logger.log(`File queued for parsing: ${mat.id}`);
+    if (this.fileParsingQueue) {
+      await this.fileParsingQueue.add('parse', {
+        materialId: mat.id,
+        storagePath,
+        fileType: ext,
+        clerkId,
+      });
+      this.logger.log(`File queued for parsing: ${mat.id}`);
+    } else {
+      this.logger.warn(
+        `Redis not available — file ${mat.id} uploaded but parsing is deferred`,
+      );
+    }
 
     return { materialId: mat.id, fileName: file.originalname };
   }
