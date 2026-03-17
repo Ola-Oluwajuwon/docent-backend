@@ -38,6 +38,7 @@ if (!redisConfigured) {
               connection: {
                 url: config.getOrThrow<string>('REDIS_URL'),
                 maxRetriesPerRequest: null,
+                tls: { rejectUnauthorized: false },
               },
             }),
           }),
