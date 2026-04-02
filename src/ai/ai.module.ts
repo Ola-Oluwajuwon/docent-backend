@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AIService } from './ai.service';
 import { AnthropicProvider } from './providers/anthropic.provider';
+import { GoogleProvider } from './providers/google.provider';
 
 @Global()
 @Module({
@@ -14,9 +15,11 @@ import { AnthropicProvider } from './providers/anthropic.provider';
         switch (provider) {
           case 'anthropic':
             return new AnthropicProvider(configService);
+          case 'google':
+            return new GoogleProvider(configService);
           default:
             throw new Error(
-              `Unsupported AI provider: "${provider}". Supported providers: anthropic`,
+              `Unsupported AI provider: "${provider}". Supported providers: anthropic, google`,
             );
         }
       },
