@@ -6,6 +6,7 @@ import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ClerkAuthGuard } from './common/guards/clerk-auth.guard';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { AIModule } from './ai/ai.module';
 import { UsersModule } from './modules/users/users.module';
 import { FilesModule } from './modules/files/files.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
@@ -24,6 +25,8 @@ if (!redisConfigured) {
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+
+    AIModule,
 
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 60 }],

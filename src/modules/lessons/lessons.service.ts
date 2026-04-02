@@ -1,11 +1,7 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../../config/supabase.service';
 import { R2Service } from '../../config/r2.service';
-import { ClaudeService } from './claude.service';
+import { LessonAIService } from './lesson-ai.service';
 import {
   Lesson,
   LessonListItem,
@@ -19,20 +15,18 @@ export class LessonsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly r2: R2Service,
-    private readonly claude: ClaudeService,
+    private readonly lessonAI: LessonAIService,
   ) {}
 
   async generateLesson(
     materialId: string,
     userId: string,
   ): Promise<{ lessonId: string; outline: LessonOutline }> {
-    const parsedTextBuffer = await this.r2.download(
-      `parsed/${materialId}.txt`,
-    );
+    const parsedTextBuffer = await this.r2.download(`parsed/${materialId}.txt`);
     const rawText = parsedTextBuffer.toString('utf-8');
 
     this.logger.log(`Generating lesson outline for material: ${materialId}`);
-    const outline = await this.claude.generateLessonOutline(rawText);
+    const outline = await this.lessonAI.generateLessonOutline(rawText);
 
     const client = this.supabase.getClient();
     const { data: lesson, error } = await client
@@ -81,10 +75,7 @@ export class LessonsService {
     }));
   }
 
-  async findOneByUser(
-    lessonId: string,
-    userId: string,
-  ): Promise<Lesson> {
+  async findOneByUser(lessonId: string, userId: string): Promise<Lesson> {
     const client = this.supabase.getClient();
 
     const { data, error } = await client

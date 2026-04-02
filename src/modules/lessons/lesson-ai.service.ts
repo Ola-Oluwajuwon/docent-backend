@@ -3,24 +3,17 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import Anthropic from '@anthropic-ai/sdk';
+import { AIService } from '../../ai/ai.service';
 import {
   LessonOutline,
   LessonSegment,
 } from './interfaces/lesson-outline.interface';
 
 @Injectable()
-export class ClaudeService {
-  private readonly client: Anthropic;
-  private readonly logger = new Logger(ClaudeService.name);
-  private readonly model = 'claude-sonnet-4-5-20250514';
+export class LessonAIService {
+  private readonly logger = new Logger(LessonAIService.name);
 
-  constructor(private readonly configService: ConfigService) {
-    this.client = new Anthropic({
-      apiKey: this.configService.getOrThrow<string>('ANTHROPIC_API_KEY'),
-    });
-  }
+  constructor(private readonly ai: AIService) {}
 
   async generateLessonOutline(
     rawText: string,
@@ -30,15 +23,10 @@ export class ClaudeService {
       ? `The subject area is: ${subject}.`
       : 'Infer the subject from the content.';
 
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 4096,
-      system:
+    const text = await this.ai.generateText({
+      systemPrompt:
         'You are an expert curriculum designer. Your job is to transform raw educational content into a structured lesson outline. Always respond with valid JSON only — no markdown, no explanation, no preamble.',
-      messages: [
-        {
-          role: 'user',
-          content: `${subjectHint}
+      userMessage: `${subjectHint}
 
 Transform the following educational content into a structured lesson outline. Return a JSON object with this exact schema:
 
@@ -62,46 +50,23 @@ Transform the following educational content into a structured lesson outline. Re
 
 Content to transform:
 ${rawText}`,
-        },
-      ],
+      maxTokens: 4096,
     });
 
-    const textBlock = response.content.find((block) => block.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      throw new InternalServerErrorException(
-        'Claude returned no text content in response',
-      );
-    }
-
-    return this.parseOutlineResponse(textBlock.text);
+    return this.parseOutlineResponse(text);
   }
 
   async generateLessonScript(segment: LessonSegment): Promise<string> {
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: 2048,
-      system:
+    return this.ai.generateText({
+      systemPrompt:
         'You are Docent, a warm, encouraging, and engaging AI tutor. Speak directly to the student in a conversational tone, as if you are in the same room.',
-      messages: [
-        {
-          role: 'user',
-          content: `Write a 2–4 paragraph spoken narration script for the following lesson segment.
+      userMessage: `Write a 2–4 paragraph spoken narration script for the following lesson segment.
 
 Segment type: ${segment.type}
 Segment title: ${segment.title}
 Content: ${segment.content}`,
-        },
-      ],
+      maxTokens: 2048,
     });
-
-    const textBlock = response.content.find((block) => block.type === 'text');
-    if (!textBlock || textBlock.type !== 'text') {
-      throw new InternalServerErrorException(
-        'Claude returned no text content for script generation',
-      );
-    }
-
-    return textBlock.text;
   }
 
   private parseOutlineResponse(raw: string): LessonOutline {
@@ -116,7 +81,9 @@ Content: ${segment.content}`,
       const parsed: unknown = JSON.parse(cleaned);
       return parsed as LessonOutline;
     } catch {
-      this.logger.error(`Failed to parse Claude response as JSON: ${cleaned.slice(0, 200)}`);
+      this.logger.error(
+        `Failed to parse AI response as JSON: ${cleaned.slice(0, 200)}`,
+      );
       throw new InternalServerErrorException(
         'Failed to parse lesson outline from AI response. The model returned invalid JSON.',
       );
