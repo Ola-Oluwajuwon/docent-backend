@@ -13,6 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { UsersService } from '../users/users.service';
 import { FilesService } from './files.service';
@@ -29,6 +30,7 @@ export class FilesController {
   ) {}
 
   @Post('upload')
+  @ResponseMessage('File uploaded successfully')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -56,6 +58,7 @@ export class FilesController {
   }
 
   @Get(':materialId/status')
+  @ResponseMessage('Material status retrieved')
   async getStatus(
     @Param('materialId', new ParseUUIDPipe()) materialId: string,
     @CurrentUser() currentUser: AuthenticatedUser,

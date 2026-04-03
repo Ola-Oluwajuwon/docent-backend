@@ -7,6 +7,7 @@ import {
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 import { AuthenticatedUser } from '../../common/interfaces/authenticated-user.interface';
 import { UsersService } from '../users/users.service';
 import { LessonsService } from './lessons.service';
@@ -21,6 +22,7 @@ export class LessonsController {
   ) {}
 
   @Post('generate')
+  @ResponseMessage('Lesson generated successfully')
   async generate(
     @Body() dto: GenerateLessonDto,
     @CurrentUser() currentUser: AuthenticatedUser,
@@ -34,6 +36,7 @@ export class LessonsController {
   }
 
   @Get()
+  @ResponseMessage('Lessons retrieved')
   async findAll(@CurrentUser() currentUser: AuthenticatedUser) {
     const user = await this.usersService.findOrCreate(
       currentUser.clerkId,
@@ -44,6 +47,7 @@ export class LessonsController {
   }
 
   @Get(':id')
+  @ResponseMessage('Lesson retrieved')
   async findOne(
     @Param('id', new ParseUUIDPipe()) id: string,
     @CurrentUser() currentUser: AuthenticatedUser,
