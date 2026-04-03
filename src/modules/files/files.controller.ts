@@ -6,6 +6,9 @@ import {
   UploadedFile,
   UseInterceptors,
   ParseUUIDPipe,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
@@ -17,12 +20,6 @@ import { UploadFileResponseDto } from './dto/upload-file-response.dto';
 import { MaterialStatusResponseDto } from './dto/material-status-response.dto';
 
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
-
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
-];
 
 @Controller('files')
 export class FilesController {
@@ -36,21 +33,18 @@ export class FilesController {
     FileInterceptor('file', {
       storage: memoryStorage(),
       limits: { fileSize: MAX_FILE_SIZE },
-      fileFilter: (
-        _req: Express.Request,
-        file: Express.Multer.File,
-        cb: (error: Error | null, acceptFile: boolean) => void,
-      ) => {
-        if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-          cb(null, true);
-        } else {
-          cb(new Error('Unsupported file type'), false);
-        }
-      },
     }),
   )
   async uploadFile(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: MAX_FILE_SIZE }),
+          new FileTypeValidator({ fileType: /(pdf|plain|wordprocessingml)/ }),
+        ],
+      }),
+    )
+    file: Express.Multer.File,
     @CurrentUser() currentUser: AuthenticatedUser,
   ): Promise<UploadFileResponseDto> {
     const user = await this.usersService.findOrCreate(
