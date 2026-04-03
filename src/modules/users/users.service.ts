@@ -1,4 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../../config/supabase.service';
 import { User } from './user.interface';
 
@@ -33,7 +37,9 @@ export class UsersService {
 
     if (createError || !created) {
       this.logger.error(`Failed to upsert user: ${createError?.message}`);
-      throw new Error(`Failed to upsert user: ${createError?.message}`);
+      throw new InternalServerErrorException(
+        'Failed to create or retrieve user',
+      );
     }
 
     this.logger.log(`User upserted: ${clerkId}`);

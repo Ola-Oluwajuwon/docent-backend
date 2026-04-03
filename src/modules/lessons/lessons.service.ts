@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { SupabaseService } from '../../config/supabase.service';
 import { R2Service } from '../../config/r2.service';
 import { LessonAIService } from './lesson-ai.service';
@@ -43,7 +48,7 @@ export class LessonsService {
 
     if (error || !lesson) {
       this.logger.error(`Failed to insert lesson: ${error?.message}`);
-      throw new Error(`Failed to insert lesson: ${error?.message}`);
+      throw new InternalServerErrorException('Failed to create lesson');
     }
 
     const created = lesson as Lesson;
@@ -63,7 +68,7 @@ export class LessonsService {
 
     if (error) {
       this.logger.error(`Failed to fetch lessons: ${error.message}`);
-      throw new Error(`Failed to fetch lessons: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch lessons');
     }
 
     return (data as Lesson[]).map((lesson) => ({

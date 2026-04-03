@@ -3,6 +3,7 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  InternalServerErrorException,
   Optional,
   Inject,
 } from '@nestjs/common';
@@ -69,7 +70,7 @@ export class FilesService {
 
     if (error || !material) {
       this.logger.error(`Failed to insert material: ${error?.message}`);
-      throw new Error(`Failed to insert material: ${error?.message}`);
+      throw new InternalServerErrorException('Failed to save material record');
     }
 
     const mat = material as Material;
