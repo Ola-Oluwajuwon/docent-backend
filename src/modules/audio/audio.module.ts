@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { AudioController } from './audio.controller';
-import { ElevenLabsService } from './elevenlabs.service';
+import { ChatterboxService } from './chatterbox.service';
 import { AudioGenerationProcessor } from './audio-generation.processor';
 import { R2Service } from '../../config/r2.service';
 import { SupabaseService } from '../../config/supabase.service';
@@ -22,11 +22,11 @@ const redisConfigured =
   ],
   controllers: [AudioController],
   providers: [
-    ElevenLabsService,
+    ChatterboxService,
     ...(redisConfigured ? [AudioGenerationProcessor] : []),
     R2Service,
     SupabaseService,
   ],
-  exports: [ElevenLabsService],
+  exports: [ChatterboxService],
 })
 export class AudioModule {}

@@ -2,7 +2,7 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { SupabaseService } from '../../config/supabase.service';
-import { ElevenLabsService } from './elevenlabs.service';
+import { ChatterboxService } from './chatterbox.service';
 import { Lesson } from '../lessons/interfaces/lesson-outline.interface';
 
 interface AudioGenerationJobData {
@@ -16,7 +16,7 @@ export class AudioGenerationProcessor extends WorkerHost {
 
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly elevenLabs: ElevenLabsService,
+    private readonly chatterbox: ChatterboxService,
   ) {
     super();
   }
@@ -39,7 +39,7 @@ export class AudioGenerationProcessor extends WorkerHost {
       }
 
       const typedLesson = lessonResult.data as Lesson;
-      const manifest = await this.elevenLabs.generateLessonAudio(
+      const manifest = await this.chatterbox.generateLessonAudio(
         lessonId,
         typedLesson.outline.segments,
       );
