@@ -11,6 +11,8 @@ import { AIModule } from './ai/ai.module';
 import { UsersModule } from './modules/users/users.module';
 import { FilesModule } from './modules/files/files.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
+import { AudioModule } from './modules/audio/audio.module';
+import { ProgressModule } from './modules/progress/progress.module';
 
 const logger = new Logger('AppModule');
 const redisUrl = process.env.REDIS_URL;
@@ -52,6 +54,8 @@ if (!redisConfigured) {
     UsersModule,
     FilesModule,
     LessonsModule,
+    AudioModule,
+    ProgressModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

@@ -10,5 +10,6 @@ import { UsersModule } from '../users/users.module';
   imports: [UsersModule],
   controllers: [LessonsController],
   providers: [LessonsService, LessonAIService, R2Service, SupabaseService],
+  exports: [LessonAIService],
 })
 export class LessonsModule {}

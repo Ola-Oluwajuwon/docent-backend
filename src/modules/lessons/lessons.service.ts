@@ -42,6 +42,7 @@ export class LessonsService {
         title: outline.title,
         subject: outline.subject,
         outline,
+        audio_status: 'pending',
       })
       .select()
       .single();
