@@ -27,7 +27,17 @@ if (!redisConfigured) {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: (config: Record<string, string>) => {
+        if (!config.CHATTERBOX_API_URL) {
+          throw new Error(
+            'CHATTERBOX_API_URL environment variable is required',
+          );
+        }
+        return config;
+      },
+    }),
 
     AIModule,
 

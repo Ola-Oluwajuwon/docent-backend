@@ -9,9 +9,24 @@ import { LessonAIService } from '../lessons/lesson-ai.service';
 import { LessonOutline } from '../lessons/interfaces/lesson-outline.interface';
 import { AudioManifest } from './interfaces/audio-manifest.interface';
 
+interface ChatterboxTTSRequest {
+  text: string;
+  voice_mode: 'predefined';
+  predefined_voice_id: string;
+  language: string;
+  output_format: 'wav';
+  exaggeration: number;
+  cfg_weight: number;
+  temperature: number;
+  speed_factor: number;
+  chunk_size: number;
+  seed: number;
+  split_text: boolean;
+}
+
 @Injectable()
 export class ChatterboxService {
-  private readonly apiUrl: string;
+  private readonly baseUrl: string;
   private readonly voice: string;
   private readonly exaggeration: number;
   private readonly cfgWeight: number;
@@ -23,8 +38,11 @@ export class ChatterboxService {
     private readonly r2: R2Service,
     private readonly lessonAI: LessonAIService,
   ) {
-    this.apiUrl = this.configService.getOrThrow<string>('CHATTERBOX_API_URL');
-    this.voice = this.configService.get<string>('CHATTERBOX_VOICE', '');
+    this.baseUrl = this.configService.getOrThrow<string>('CHATTERBOX_API_URL');
+    this.voice = this.configService.get<string>(
+      'CHATTERBOX_VOICE',
+      'Emily.wav',
+    );
     this.exaggeration = parseFloat(
       this.configService.get<string>('CHATTERBOX_EXAGGERATION', '0.5'),
     );
@@ -36,32 +54,35 @@ export class ChatterboxService {
     );
   }
 
-  async generateSpeech(
-    script: string,
-    lessonId: string,
-    segmentId: string,
-  ): Promise<string> {
-    this.logger.log(`Generating speech for segment: ${segmentId}`);
+  async generateSpeech(text: string): Promise<Buffer> {
+    this.logger.log(`Generating speech for text (${text.length} chars)`);
 
-    const body: Record<string, unknown> = {
-      input: script,
+    const requestBody: ChatterboxTTSRequest = {
+      text,
+      voice_mode: 'predefined',
+      predefined_voice_id: this.voice,
+      language: 'en',
+      output_format: 'wav',
       exaggeration: this.exaggeration,
       cfg_weight: this.cfgWeight,
       temperature: this.temperature,
+      speed_factor: 1,
+      chunk_size: 140,
+      seed: 4096,
+      split_text: true,
     };
-
-    if (this.voice) {
-      body.voice = this.voice;
-    }
 
     let response: Response;
     try {
-      response = await fetch(`${this.apiUrl}/v1/audio/speech`, {
+      response = await fetch(`${this.baseUrl}/tts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(requestBody),
       });
     } catch (error) {
+      this.logger.error(
+        `Chatterbox network error: ${(error as Error).message}`,
+      );
       throw new InternalServerErrorException(
         `Chatterbox network error: ${(error as Error).message}`,
       );
@@ -71,19 +92,30 @@ export class ChatterboxService {
       const errorBody = await response
         .text()
         .catch(() => 'Unable to read response body');
+      this.logger.error(`Chatterbox returned ${response.status}: ${errorBody}`);
       throw new InternalServerErrorException(
         `Chatterbox returned ${response.status}: ${errorBody}`,
       );
     }
 
     const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = Buffer.from(arrayBuffer);
+    return Buffer.from(arrayBuffer);
+  }
 
-    const r2Key = `audio/${lessonId}/${segmentId}.wav`;
-    const publicUrl = await this.r2.upload(r2Key, audioBuffer, 'audio/wav');
+  async healthCheck(): Promise<{ ok: boolean; url: string }> {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-    this.logger.log(`Audio uploaded for segment ${segmentId}: ${r2Key}`);
-    return publicUrl;
+      const response = await fetch(`${this.baseUrl}/api/model-info`, {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+      return { ok: response.ok, url: this.baseUrl };
+    } catch {
+      return { ok: false, url: this.baseUrl };
+    }
   }
 
   async generateLessonAudio(
@@ -98,7 +130,12 @@ export class ChatterboxService {
 
     for (const segment of segments) {
       const script = await this.lessonAI.generateLessonScript(segment);
-      const audioUrl = await this.generateSpeech(script, lessonId, segment.id);
+      const audioBuffer = await this.generateSpeech(script);
+
+      const r2Key = `audio/${lessonId}/${segment.id}.wav`;
+      const audioUrl = await this.r2.upload(r2Key, audioBuffer, 'audio/wav');
+
+      this.logger.log(`Audio uploaded for segment ${segment.id}: ${r2Key}`);
 
       manifestSegments.push({
         segmentId: segment.id,
