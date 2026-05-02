@@ -59,4 +59,32 @@ export class LessonsController {
     );
     return this.lessonsService.findOneByUser(id, user.id);
   }
+
+  @Get(':id/outline')
+  @ResponseMessage('Lesson outline retrieved')
+  async getOutline(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    const user = await this.usersService.findOrCreate(
+      currentUser.clerkId,
+      currentUser.email,
+      '',
+    );
+    return this.lessonsService.getOutline(id, user.id);
+  }
+
+  @Get(':id/progress')
+  @ResponseMessage('Lesson progress retrieved')
+  async getProgress(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @CurrentUser() currentUser: AuthenticatedUser,
+  ) {
+    const user = await this.usersService.findOrCreate(
+      currentUser.clerkId,
+      currentUser.email,
+      '',
+    );
+    return this.lessonsService.getProgress(id, user.id);
+  }
 }

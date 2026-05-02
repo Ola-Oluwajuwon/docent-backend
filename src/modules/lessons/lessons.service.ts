@@ -12,6 +12,7 @@ import {
   LessonListItem,
   LessonOutline,
 } from './interfaces/lesson-outline.interface';
+import { ProgressService } from '../progress/progress.service';
 
 @Injectable()
 export class LessonsService {
@@ -21,6 +22,7 @@ export class LessonsService {
     private readonly supabase: SupabaseService,
     private readonly r2: R2Service,
     private readonly lessonAI: LessonAIService,
+    private readonly progress: ProgressService,
   ) {}
 
   async generateLesson(
@@ -95,5 +97,14 @@ export class LessonsService {
     }
 
     return data as Lesson;
+  }
+
+  async getOutline(lessonId: string, userId: string): Promise<LessonOutline> {
+    const lesson = await this.findOneByUser(lessonId, userId);
+    return lesson.outline;
+  }
+
+  async getProgress(lessonId: string, userId: string) {
+    return this.progress.findByLessonAndUser(lessonId, userId);
   }
 }
