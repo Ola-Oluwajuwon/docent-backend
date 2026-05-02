@@ -23,6 +23,7 @@ export interface Lesson {
   title: string;
   subject: string | null;
   outline: LessonOutline;
+  audio_status: 'pending' | 'generating' | 'ready' | 'failed';
   created_at: string;
 }
 

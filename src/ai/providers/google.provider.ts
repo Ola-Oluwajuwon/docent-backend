@@ -19,11 +19,15 @@ export class GoogleProvider extends AIService {
     const model = this.client.getGenerativeModel({
       model: this.model,
       systemInstruction: options.systemPrompt,
+      generationConfig: {
+        maxOutputTokens: options.maxTokens,
+        responseMimeType:
+          options.responseType === 'json' ? 'application/json' : 'text/plain',
+      },
     });
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: options.userMessage }] }],
-      generationConfig: { maxOutputTokens: options.maxTokens },
     });
 
     const text = result.response.text();

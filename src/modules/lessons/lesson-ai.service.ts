@@ -25,7 +25,9 @@ export class LessonAIService {
 
     const text = await this.ai.generateText({
       systemPrompt:
-        'You are an expert curriculum designer. Your job is to transform raw educational content into a structured lesson outline. Always respond with valid JSON only — no markdown, no explanation, no preamble.',
+        'You are an expert curriculum designer. Your job is to transform raw educational content into a structured lesson outline. ' +
+        'Create a concise, focused lesson (30-60 minutes total). Limit the number of segments to a maximum of 15. ' +
+        'Always respond with valid JSON only — no explanation, no preamble.',
       userMessage: `${subjectHint}
 
 Transform the following educational content into a structured lesson outline. Return a JSON object with this exact schema:
@@ -51,6 +53,7 @@ Transform the following educational content into a structured lesson outline. Re
 Content to transform:
 ${rawText}`,
       maxTokens: 4096,
+      responseType: 'json',
     });
 
     return this.parseOutlineResponse(text);
@@ -72,20 +75,31 @@ Content: ${segment.content}`,
   private parseOutlineResponse(raw: string): LessonOutline {
     let cleaned = raw.trim();
 
-    const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) {
-      cleaned = fenceMatch[1].trim();
+    // Remove markdown code fences if present, even if closing fence is missing
+    if (cleaned.includes('```')) {
+      const fenceMatch = cleaned.match(/```(?:json)?\s*([\s\S]*?)(?:```|$)/i);
+      if (fenceMatch) {
+        cleaned = fenceMatch[1].trim();
+      }
+    }
+
+    // Sometimes models add a preamble or postamble outside the braces
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+    } else if (firstBrace !== -1) {
+      cleaned = cleaned.substring(firstBrace);
     }
 
     try {
-      const parsed: unknown = JSON.parse(cleaned);
-      return parsed as LessonOutline;
-    } catch {
+      return JSON.parse(cleaned) as LessonOutline;
+    } catch (err) {
       this.logger.error(
-        `Failed to parse AI response as JSON: ${cleaned.slice(0, 200)}`,
+        `Failed to parse AI response as JSON. Error: ${err.message}. Raw prefix: ${cleaned.slice(0, 200)}`,
       );
       throw new InternalServerErrorException(
-        'Failed to parse lesson outline from AI response. The model returned invalid JSON.',
+        'Failed to parse lesson outline from AI response. The model returned invalid or truncated JSON.',
       );
     }
   }
