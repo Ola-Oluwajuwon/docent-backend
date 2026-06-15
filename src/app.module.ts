@@ -6,9 +6,13 @@ import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ClerkAuthGuard } from './common/guards/clerk-auth.guard';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { AIModule } from './ai/ai.module';
 import { UsersModule } from './modules/users/users.module';
 import { FilesModule } from './modules/files/files.module';
 import { LessonsModule } from './modules/lessons/lessons.module';
+import { AudioModule } from './modules/audio/audio.module';
+import { ProgressModule } from './modules/progress/progress.module';
 
 const logger = new Logger('AppModule');
 const redisUrl = process.env.REDIS_URL;
@@ -23,7 +27,19 @@ if (!redisConfigured) {
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: (config: Record<string, string>) => {
+        if (!config.CHATTERBOX_API_URL) {
+          throw new Error(
+            'CHATTERBOX_API_URL environment variable is required',
+          );
+        }
+        return config;
+      },
+    }),
+
+    AIModule,
 
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60_000, limit: 60 }],
@@ -38,6 +54,7 @@ if (!redisConfigured) {
               connection: {
                 url: config.getOrThrow<string>('REDIS_URL'),
                 maxRetriesPerRequest: null,
+                tls: { rejectUnauthorized: false },
               },
             }),
           }),
@@ -47,12 +64,15 @@ if (!redisConfigured) {
     UsersModule,
     FilesModule,
     LessonsModule,
+    AudioModule,
+    ProgressModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: ClerkAuthGuard },
     { provide: APP_FILTER, useClass: HttpExceptionFilter },
     { provide: APP_INTERCEPTOR, useClass: LoggingInterceptor },
+    { provide: APP_INTERCEPTOR, useClass: TransformInterceptor },
   ],
 })
 export class AppModule {}

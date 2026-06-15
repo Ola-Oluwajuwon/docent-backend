@@ -1,3 +1,4 @@
+-- Users (mirrors Clerk user)
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   clerk_id TEXT UNIQUE NOT NULL,
@@ -6,6 +7,7 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Uploaded materials
 CREATE TABLE materials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -16,6 +18,7 @@ CREATE TABLE materials (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- AI-generated lesson outlines
 CREATE TABLE lessons (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   material_id UUID REFERENCES materials(id) ON DELETE CASCADE,
@@ -26,6 +29,7 @@ CREATE TABLE lessons (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Per-lesson student progress
 CREATE TABLE progress (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lesson_id UUID REFERENCES lessons(id) ON DELETE CASCADE,

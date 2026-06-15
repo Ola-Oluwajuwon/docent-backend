@@ -2,15 +2,17 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { SupabaseService } from '../../config/supabase.service';
 import { R2Service } from '../../config/r2.service';
-import { ClaudeService } from './claude.service';
+import { LessonAIService } from './lesson-ai.service';
 import {
   Lesson,
   LessonListItem,
   LessonOutline,
 } from './interfaces/lesson-outline.interface';
+import { ProgressService } from '../progress/progress.service';
 
 @Injectable()
 export class LessonsService {
@@ -19,20 +21,19 @@ export class LessonsService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly r2: R2Service,
-    private readonly claude: ClaudeService,
+    private readonly lessonAI: LessonAIService,
+    private readonly progress: ProgressService,
   ) {}
 
   async generateLesson(
     materialId: string,
     userId: string,
   ): Promise<{ lessonId: string; outline: LessonOutline }> {
-    const parsedTextBuffer = await this.r2.download(
-      `parsed/${materialId}.txt`,
-    );
+    const parsedTextBuffer = await this.r2.download(`parsed/${materialId}.txt`);
     const rawText = parsedTextBuffer.toString('utf-8');
 
     this.logger.log(`Generating lesson outline for material: ${materialId}`);
-    const outline = await this.claude.generateLessonOutline(rawText);
+    const outline = await this.lessonAI.generateLessonOutline(rawText);
 
     const client = this.supabase.getClient();
     const { data: lesson, error } = await client
@@ -49,7 +50,7 @@ export class LessonsService {
 
     if (error || !lesson) {
       this.logger.error(`Failed to insert lesson: ${error?.message}`);
-      throw new Error(`Failed to insert lesson: ${error?.message}`);
+      throw new InternalServerErrorException('Failed to create lesson');
     }
 
     const created = lesson as Lesson;
@@ -69,7 +70,7 @@ export class LessonsService {
 
     if (error) {
       this.logger.error(`Failed to fetch lessons: ${error.message}`);
-      throw new Error(`Failed to fetch lessons: ${error.message}`);
+      throw new InternalServerErrorException('Failed to fetch lessons');
     }
 
     return (data as Lesson[]).map((lesson) => ({
@@ -81,10 +82,7 @@ export class LessonsService {
     }));
   }
 
-  async findOneByUser(
-    lessonId: string,
-    userId: string,
-  ): Promise<Lesson> {
+  async findOneByUser(lessonId: string, userId: string): Promise<Lesson> {
     const client = this.supabase.getClient();
 
     const { data, error } = await client
@@ -99,5 +97,14 @@ export class LessonsService {
     }
 
     return data as Lesson;
+  }
+
+  async getOutline(lessonId: string, userId: string): Promise<LessonOutline> {
+    const lesson = await this.findOneByUser(lessonId, userId);
+    return lesson.outline;
+  }
+
+  async getProgress(lessonId: string, userId: string) {
+    return this.progress.findByLessonAndUser(lessonId, userId);
   }
 }
